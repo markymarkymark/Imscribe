@@ -1,4 +1,38 @@
-function out = me_uipickfiles(varargin)
+function [files,path,name,ext,fullname,botdir,topdir] = me_uipickfiles(groupname,grouppath,defpath,varargin)
+% uipickfiles() function w/ added functionality like remembering the last folder selected
+%
+% Syntax:
+%   [files,path,name,ext,fullname,botdir,topdir] = me_uipickfiles(groupname,grouppath,defpath,varargin...)
+% Inputs:
+%   groupname - the setpref() group to remember the last folder under (e.g. 'MyDicoms')
+%   groupath  - the setpref() variable to remember (e.g. 'lastpath')
+%   defpath   - the inital folder if none found under groupname/grouppath
+%
+% Created: Mark A. Elliott, PhD
+%   melliott@upenn.edu
+%   https://www.med.upenn.edu/CAMIPM/mark-elliott.html
+
+files=''; path=''; name=''; ext=''; fullname=''; botdir=''; topdir=''; 
+if (nargin < 2)
+    fprintf(2,'USAGE: %s(groupname,grouppath,[defpath],varargs...)\n',mfilename())
+    return
+end
+if (nargin < 3 || isempty(defpath)), defpath = pwd(); end
+if (ispref(groupname,grouppath)), path = getpref(groupname,grouppath);
+else,                             path = [defpath filesep()]; end
+
+files = uipickfiles_sub('FilterSpec',path,varargin{:});
+if (isempty(files) || isequal(files,0)), files = ''; path = ''; return; end  % user hit cancel
+
+[path,name,ext,fullname,botdir,topdir] = fileparts_plus(files);
+if (iscell(path)), path1 = path{1}; 
+else,              path1 = path;    end
+setpref(groupname,grouppath,path1);    % remember for next time
+
+end
+
+% -------------------------------------------------------------------
+function out = uipickfiles_sub(varargin)
 %uipickfiles: GUI program to select files and/or folders.
 %
 % Syntax:
@@ -110,7 +144,11 @@ function out = me_uipickfiles(varargin)
 % Author:  Douglas M. Schwarz
 % Email:   dmschwarz=ieee*org, dmschwarz=urgrad*rochester*edu
 % Real_email = regexprep(Email,{'=','*'},{'@','.'})
-
+%
+% Modified: Mark A. Elliott, PhD
+%   melliott@upenn.edu
+%   https://www.med.upenn.edu/CAMIPM/mark-elliott.html
+% Search for "MElliott" to find changes
 
 % Define properties and set default values.
 prop.filterspec = '*';
@@ -121,6 +159,7 @@ prop.prompt = 'Select files';
 prop.numfiles = [];
 prop.append = [];
 prop.output = 'cell';
+prop.sortstate = [1 0 0];  % MELLIOTT - allow default file sorting state to be user set ([1 0 0] = sort by name, [0 1 0] = sort by date)
 
 % Process inputs and set prop fields.
 prop = parsepropval(prop,varargin{:});
@@ -261,8 +300,11 @@ network_volumes = {};
 if exist(new_network_vol,'dir')
 	network_volumes = unique([network_volumes,{new_network_vol}]);
 end
+sort_state = prop.sortstate;  % MELLIOTT - allow for passed in setting
+% fdir = filtered_dir(full_filter,re_filter,prop.redirs,...
+% 	@(x)file_sort(x,[1 0 0]));
 fdir = filtered_dir(full_filter,re_filter,prop.redirs,...
-	@(x)file_sort(x,[1 0 0]));
+	@(x)file_sort(x,sort_state));  % MElliott - set original sort state based on user initial setting
 filenames = {fdir.name}';
 filenames = annotate_file_names(filenames,fdir,fsdata);
 
@@ -284,7 +326,7 @@ if ispref('uipickfiles','figure_position');
 	fig = figure('Position',fig_pos,...
 		'Color',gray,...
 		'MenuBar','none',...
-		'WindowStyle','modal',...
+		'WindowStyle','normal',...  % Melliott changed from "modal"
 		'Resize','on',...
 		'NumberTitle','off',...
 		'Name',prop.prompt,...
@@ -298,7 +340,7 @@ else
 	fig = figure('Position',fig_pos,...
 		'Color',gray,...
 		'MenuBar','none',...
-		'WindowStyle','modal',...
+		'WindowStyle','normal',...  % Melliott changed from "modal"
 		'Resize','on',...
 		'NumberTitle','off',...
 		'Name',prop.prompt,...
@@ -350,8 +392,8 @@ tri_up(tri_up == 1) = NaN;
 tri_down = tri_up(end:-1:1,:,:);
 tri_null = NaN(4,9,3);
 tri_icon = {tri_down,tri_null,tri_up};
-sort_state = [1 0 0];
-last_sort_state = [1 1 1];
+%sort_state = [1 0 0];       % MELLIOTT - moved this up and allowed for it to be user passed in
+last_sort_state = [1 1 1];   
 sort_cb = zeros(1,3);
 sort_cb(1) = uicontrol('Style','checkbox',...
 	'Position',[15 331 70 15],...
@@ -825,7 +867,7 @@ setpref('uipickfiles','figure_position',fig_pos)
 		else
 			sort_state = zeros(1,3);
 			sort_state(cb) = last_sort_state(cb);
-		end
+        end
 		set(sort_cb,{'CData'},tri_icon(sort_state + 2)')
 		
 		fdir = filtered_dir(full_filter,re_filter,prop.redirs,...
@@ -1416,7 +1458,8 @@ switch find(sort_state)
 			index = index(end:-1:1);
 		end
 	case 2
-		if sort_state(2) > 0
+%		if sort_state(2) > 0
+		if sort_state(2) < 0  % MElliott - make default sort by date be NEWEST first
 			[files_sorted,index] = sort([files.datenum]);
 		else
 			[files_sorted,index] = sort([files.datenum],'descend');

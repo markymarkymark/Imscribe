@@ -1,4 +1,4 @@
-function hdr = ME_spm8_dicom_headers3(P, essentials)
+function hdr = me_spm8_dicom_headers(P)
 % Read header information from DICOM files
 % FORMAT hdr = spm_dicom_headers(P [,essentials])
 % P   - array of filenames
@@ -19,33 +19,35 @@ function hdr = ME_spm8_dicom_headers3(P, essentials)
 
 % Modifications by MELLIOTT (search for MELLIOTT to find them)
 %  - added more fields to read_dicom()
-%  - made obsolete ME_spm_dicom_header() & ME_spm_dicom_header2()
-%       this should work for both Linux and Windows
-%  - made obsolete ME_spm_dicom_dict.mat & ME_spm_dicom_dict2.mat
-%       readdict now reads 'spm_dicom_dict.mat' from SPM file tree
+%  - made spm dicom dict persistent to speed things up
+% NOTE: requires SPM8 is in your PATH
 
-if nargin<2, essentials = false; end
+persistent dict  % MELLIOTT
+if isempty(dict) % MELLIOTT
+%    disp('reading dicom dictionary (hopefully only once).');
+    dict = readdict;
+end
 
-dict = readdict;
-j    = 0;
 hdr  = {};
-if size(P,1)>1, spm_progress_bar('Init',size(P,1),'Reading DICOM headers','Files complete'); end;
+
+% SPMver = get_spm_version('SPM8');  % MELLIOTT
+% if (isempty(SPMver)), return; end
+
+j    = 0;
 for i=1:size(P,1),
     tmp = readdicomfile(P(i,:),dict);
     if ~isempty(tmp),
-        if essentials, tmp = spm_dicom_essentials(tmp); end
         j      = j + 1;
         hdr{j} = tmp;
     end;
-    if size(P,1)>1, spm_progress_bar('Set',i); end;
 end;
-if size(P,1)>1, spm_progress_bar('Clear'); end;
 return;
 %_______________________________________________________________________
 
 %_______________________________________________________________________
 function ret = readdicomfile(P,dict)
 ret = [];
+%disp(P); % MELLIOTT
 P   = deblank(P);
 fp  = fopen(P,'r','ieee-le');
 if fp==-1, warning(['Cant open "' P '".']); return; end;
@@ -452,16 +454,15 @@ if strcmp(fmt,'ieee-be') || strcmp(fmt,'ieee-be.l64'),
     fp  = fopen(fname,perm,fmt);
 end;
 fseek(fp,pos+lim,'bof');
-return
+return;
 %_______________________________________________________________________
 
 %_______________________________________________________________________
 function t = decode_csa1(fp,lim)
 n   = fread(fp,1,'uint32');
-%fprintf(1,'decode_csa1: %1d\n',n);
 if isempty(n) || n>1024 || n <= 0,
     fseek(fp,lim-4,'cof');
-    t = struct('name','JUNK: Don''t know how to read this damned file format'); % label this private field as unreadable
+    t = struct('name','JUNK: Don''t know how to read this damned file format');
     return;
 end;
 unused = fread(fp,1,'uint32')'; % Unused "M" or 77 for some reason
@@ -503,7 +504,6 @@ function t = decode_csa2(fp,lim)
 unused1 = fread(fp,4,'uint8'); % Unused
 unused2 = fread(fp,4,'uint8'); % Unused
 n    = fread(fp,1,'uint32');
-%fprintf(1,'decode_csa2: %1d\n',n);
 opos = ftell(fp);
 if isempty(n) || n>1024 || n < 0,
     fseek(fp,lim-4,'cof');

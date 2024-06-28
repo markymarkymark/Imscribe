@@ -1,19 +1,22 @@
 function [stat,val,hdr,dtype] = dicom_get_header(hdr,fieldname)
 % Return a Dicom header value
 %	Checks for field in standard header and Siemens Private header.
-%   If called w/o a fieldname, then forces extraction of all Siemens Private header fields.
+%   If called w/o a fieldname, then extracts ALL Siemens Private header fields
 % returns:
 %   0 if error
 %   1 if Siemens private header succeccfully parsed
 %   2 if no Siemens private header found
-%------------------------------------------------------------------------
+%
+% Created: Mark A. Elliott, PhD
+%   melliott@upenn.edu
+%   https://www.med.upenn.edu/CAMIPM/mark-elliott.html
 
 stat  = 0;
 val   = 0;
 dtype = '';
 
 % -------------------------------------------------
-% --- Return standard header field if it exists ---
+% --- Return existing header field if it exists ---
 % -------------------------------------------------
 if (nargin > 1)
     if (isfield(hdr,fieldname))
@@ -39,13 +42,8 @@ if (~isfield(hdr,'Private_headers_parsed'))
     hdr.is_csi = (hdr.is_spec & (hdr.Rows > 1));
 
     % --- Call SPM module to parse Private fields ---
-    %fprintf(1,'Using spm_dicom_headers() to extract Private Dicom headers...\n');
-%     if (isunix)
-%         tmp  = ME_spm_dicom_headers2(hdr.Filename);
-%     else
-%         tmp  = ME_spm_dicom_headers(hdr.Filename);
-%     end
-    tmp  = ME_spm8_dicom_headers3(hdr.Filename);
+    tmp  = me_spm8_dicom_headers(hdr.Filename);
+    if (isempty(tmp)), return; end
     thdr = tmp{1};
 		
     % --- find and rename the Private Image header fields ---
@@ -53,8 +51,6 @@ if (~isfield(hdr,'Private_headers_parsed'))
         hdr.PrivateImageHdr = thdr.Private_0029_1010;
     elseif (isfield(thdr,'Private_0029_1110'))
         hdr.PrivateImageHdr = thdr.Private_0029_1110;
-    elseif (isfield(thdr,'Private_0029_1210'))
-        hdr.PrivateImageHdr = thdr.Private_0029_1210;
     elseif (isfield(thdr,'Private_0029_1210'))
         hdr.PrivateImageHdr = thdr.Private_0029_1210;
     elseif (isfield(thdr,'CSAImageHeaderInfo'))
