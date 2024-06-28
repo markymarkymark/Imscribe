@@ -46,7 +46,7 @@ switch (mode)
         vols2 = [vol1 ; vol2];
         vols2(2).mat = pnorm.M * vols2(2).mat;		% incorporate xform into target volume for reslice below
         
-    case {'coreg','intermodal','intramodal'}  % note bug in 'intramodal' option!
+    case {'coreg','intermodal'} 
         if (~quiet), disp('Performing rigid-body INTER-modal coregistration...'); end
 %        pmat  = ME_spm_coreg(vol1,vol2);
         pmat  = spm_coreg(vol1,vol2);
@@ -75,4 +75,4 @@ end
 outfile = ME_spm8_reslice_images(vols2,flags,newfilename);
 rvol = spm_vol(outfile);
 return;	 
-			 
+

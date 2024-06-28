@@ -1,4 +1,4 @@
-function out = ME_spm8_dicom_convert3(hdr,opts,root_dir,format)
+function out = me_spm8_dicom_convert(hdr,opts,root_dir,format)
 % Convert DICOM images into something that SPM can use
 % FORMAT spm_dicom_convert(hdr,opts,root_dir,format)
 % Inputs:
@@ -39,12 +39,14 @@ function out = ME_spm8_dicom_convert3(hdr,opts,root_dir,format)
 % Modifications by MELLIOTT (search for MELLIOTT to find them)
 %   - output filename is provided using 'root_dir' argument
 %   - can handle 4D result, makes <root_dir>_%3.3d.nii filenames
-%   - made obsolete different linux/windows versions (e.g. ME_spm8_dicom_convert2())
 % % - forced hard-coded output of 16-bit uint
 
 if nargin<2, opts     = 'all'; end
 if nargin<3, root_dir = 'flat';end
 if nargin<4, format   = 'img'; end
+
+% SPMver = get_spm_version('SPM8');  % MELLIOTT
+% if (isempty(SPMver)), return; end
 
 [images,other]    = select_tomographic_images(hdr);
 [spect,guff]      = select_spectroscopy_images(other);

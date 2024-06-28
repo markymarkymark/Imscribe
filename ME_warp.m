@@ -1,4 +1,4 @@
-function handle = warp(varargin)
+function handle = me_warp(varargin)
 %WARP Display image as texture-mapped surface.
 %   WARP(X,MAP) displays the indexed image X with colormap MAP as
 %   a texture map on a simple rectangular surface.
@@ -50,10 +50,11 @@ if (~isempty(clim))
     set(axHandle, 'CLim', clim);
 end
 if (~isempty(map))
-    set(get(axHandle,'Parent'), 'Colormap', map);
+    % set(get(axHandle,'Parent'), 'Colormap', map);
+    set(axHandle, 'Colormap', map);
 end
 
-if likeimage && ~ishold
+if likeimage && ~ishold()
     view(2)
     axis([min(x(:)) max(x(:)) min(y(:)) max(y(:))])
 else

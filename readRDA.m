@@ -1,25 +1,20 @@
-function [fid,hdr] = readRDA2(infile)
-
-% --- Remember path of last time this routine was called ---
-global RDA_defpath
-if (size(RDA_defpath,1) == 0) 
-	RDA_defpath = pwd();
-end
+function [fid,hdr] = readRDA(infile)
+% readRDA() - Read spectroscopy RDA file
+%           - Return all the header fields in a struct
+%
+% Syntax:
+%   [fid,hdr] = readRDA([rdafile])
+%
+% Created: Mark A. Elliott, PhD
+%   melliott@upenn.edu
+%   https://www.med.upenn.edu/CAMIPM/mark-elliott.html
 
 fid = [];
 hdr = [];
-
 if (nargin < 1 || isempty(infile))
-    [file1, path1] = uigetfile('*.rda','Select a Siemens RDA file',RDA_defpath);
-	if isequal(file1,0)
-        hdr = [];
-		disp('Program cancelled.');
-		return
-	end
-	RDA_defpath = path1;
-    infile = [path1 filesep() file1];
+    infile = uigetfile_plus(mfilename(),'rdapath',pwd(),'*.rda','Select a Siemens RDA file');
+	if isempty(infile); return;	end
 end
-
 fp = fopen(infile,'r');
 
 head_start_text = '>>> Begin of header <<<';
@@ -51,10 +46,9 @@ end
 
 % read data
 fid = fread(fp , hdr.CSIMatrixSize0 * hdr.CSIMatrixSize1 * hdr.CSIMatrixSize2 * hdr.VectorSize * 2 , 'double');  
+fclose(fp);
 fid = reshape(fid, 2, hdr.VectorSize, hdr.CSIMatrixSize0, hdr.CSIMatrixSize1, hdr.CSIMatrixSize2);
 fid = complex(fid(1,:,:,:,:),fid(2,:,:,:,:));
 %fid = squeeze(fid);  % this doesn't remove leading singleton!!
-fidx = fid(1,:,:,:,:);
-fclose(fp);
-
+%fidx = fid(1,:,:,:,:);
 end
